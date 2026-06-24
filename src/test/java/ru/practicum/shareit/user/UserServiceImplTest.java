@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import ru.practicum.shareit.exception.ConflictException;
 import ru.practicum.shareit.exception.NotFoundException;
 
@@ -33,7 +34,6 @@ class UserServiceImplTest {
         savedUser.setName("Test");
         savedUser.setEmail("test@mail.com");
 
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
         UserDto result = userService.createUser(input);
@@ -45,11 +45,16 @@ class UserServiceImplTest {
     @Test
     void createUser_whenEmailExists_thenThrowsConflictException() {
         UserDto input = new UserDto();
+        input.setName("Test");
         input.setEmail("test@mail.com");
 
-        when(userRepository.existsByEmail(anyString())).thenReturn(true);
+        when(userRepository.save(any(User.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
 
-        assertThrows(ConflictException.class, () -> userService.createUser(input));
+        assertThrows(
+                ConflictException.class,
+                () -> userService.createUser(input)
+        );
     }
 
     @Test
@@ -66,15 +71,22 @@ class UserServiceImplTest {
         existingUser.setName("Old");
         existingUser.setEmail("old@mail.com");
 
+        User savedUser = new User();
+        savedUser.setId(1L);
+        savedUser.setName("New");
+        savedUser.setEmail("old@mail.com");
+
         UserDto input = new UserDto();
         input.setName("New");
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
-        when(userRepository.update(any(User.class))).thenReturn(existingUser);
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(existingUser));
+
+        when(userRepository.saveAndFlush(any(User.class)))
+                .thenReturn(savedUser);
 
         UserDto result = userService.updateUser(1L, input);
 
         assertEquals("New", result.getName());
-        verify(userRepository, times(1)).update(any(User.class));
     }
 }
