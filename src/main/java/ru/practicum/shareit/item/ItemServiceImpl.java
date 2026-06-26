@@ -52,7 +52,7 @@ public class ItemServiceImpl implements ItemService {
         if (itemDto.getName() != null) existingItem.setName(itemDto.getName());
         if (itemDto.getDescription() != null) existingItem.setDescription(itemDto.getDescription());
         if (itemDto.getAvailable() != null) existingItem.setAvailable(itemDto.getAvailable());
-        return toItemResponseDto(itemRepository.save(existingItem), userId);
+        return toItemResponseDto(existingItem, userId);
     }
 
     @Override
