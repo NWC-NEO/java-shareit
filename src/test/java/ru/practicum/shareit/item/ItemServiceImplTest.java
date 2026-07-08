@@ -5,8 +5,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import ru.practicum.shareit.booking.BookingRepository;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemResponseDto;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
@@ -25,6 +27,12 @@ class ItemServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private BookingRepository bookingRepository;
+
+    @Mock
+    private CommentRepository commentRepository;
+
     @InjectMocks
     private ItemServiceImpl itemService;
 
@@ -35,14 +43,21 @@ class ItemServiceImplTest {
         input.setDescription("Desc");
         input.setAvailable(true);
 
+        User user = new User();
+        user.setId(1L);
+
         Item savedItem = new Item();
         savedItem.setId(1L);
         savedItem.setName("Item");
+        savedItem.setOwner(user);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(new User()));
-        when(itemRepository.save(any(Item.class))).thenReturn(savedItem);
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(user));
 
-        ItemDto result = itemService.createItem(1L, input);
+        when(itemRepository.save(any(Item.class)))
+                .thenReturn(savedItem);
+
+        ItemResponseDto result = itemService.createItem(1L, input);
 
         assertEquals(1L, result.getId());
     }
@@ -58,12 +73,18 @@ class ItemServiceImplTest {
     void updateItem_whenNotOwner_thenThrowsNotFoundException() {
         Item existingItem = new Item();
         existingItem.setId(1L);
-        existingItem.setOwnerId(2L);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(new User()));
-        when(itemRepository.findById(1L)).thenReturn(Optional.of(existingItem));
+        User owner = new User();
+        owner.setId(2L);
+        existingItem.setOwner(owner);
 
-        assertThrows(NotFoundException.class, () -> itemService.updateItem(1L, 1L, new ItemDto()));
+        when(itemRepository.findById(1L))
+                .thenReturn(Optional.of(existingItem));
+
+        assertThrows(
+                NotFoundException.class,
+                () -> itemService.updateItem(1L, 1L, new ItemDto())
+        );
     }
 
     @Test

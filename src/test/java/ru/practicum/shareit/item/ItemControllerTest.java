@@ -8,6 +8,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemResponseDto;
 
 import java.util.List;
 
@@ -35,7 +36,7 @@ class ItemControllerTest {
         input.setDescription("Desc");
         input.setAvailable(true);
 
-        ItemDto output = new ItemDto();
+        ItemResponseDto output = new ItemResponseDto();
         output.setId(1L);
         output.setName("Item");
 
@@ -54,7 +55,7 @@ class ItemControllerTest {
         ItemDto input = new ItemDto();
         input.setName("Updated");
 
-        ItemDto output = new ItemDto();
+        ItemResponseDto output = new ItemResponseDto();
         output.setId(1L);
         output.setName("Updated");
 
@@ -70,19 +71,20 @@ class ItemControllerTest {
 
     @Test
     void getItemById_thenReturns200() throws Exception {
-        ItemDto output = new ItemDto();
+        ItemResponseDto output = new ItemResponseDto();
         output.setId(1L);
 
-        when(itemService.getItemById(1L)).thenReturn(output);
+        when(itemService.getItemById(1L, 1L)).thenReturn(output);
 
-        mvc.perform(get("/items/1"))
+        mvc.perform(get("/items/1")
+                        .header(USER_ID_HEADER, 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
     }
 
     @Test
     void searchItems_thenReturnsList() throws Exception {
-        when(itemService.searchItems(anyString())).thenReturn(List.of(new ItemDto()));
+        when(itemService.searchItems(anyString())).thenReturn(List.of(new ItemResponseDto()));
 
         mvc.perform(get("/items/search").param("text", "query"))
                 .andExpect(status().isOk())

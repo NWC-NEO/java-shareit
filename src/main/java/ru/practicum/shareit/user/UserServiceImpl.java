@@ -1,6 +1,7 @@
 package ru.practicum.shareit.user;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.ConflictException;
 import ru.practicum.shareit.exception.NotFoundException;
@@ -29,11 +30,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto createUser(UserDto userDto) {
-        if (userRepository.existsByEmail(userDto.getEmail())) {
+        try {
+            User user = UserMapper.toUser(userDto);
+            return UserMapper.toUserDto(userRepository.save(user));
+        } catch (DataIntegrityViolationException e) {
             throw new ConflictException("Пользователь с таким email уже существует");
         }
-        User user = UserMapper.toUser(userDto);
-        return UserMapper.toUserDto(userRepository.save(user));
     }
 
     @Override
@@ -41,23 +43,29 @@ public class UserServiceImpl implements UserService {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Пользователь не найден с id: " + id));
 
-        if (userDto.getEmail() != null) {
-            if (!userDto.getEmail().equals(existingUser.getEmail())) {
-                if (userRepository.existsByEmail(userDto.getEmail())) {
-                    throw new ConflictException("Пользователь с таким email уже существует");
-                }
-                existingUser.setEmail(userDto.getEmail());
-            }
-        }
         if (userDto.getName() != null) {
             existingUser.setName(userDto.getName());
         }
 
-        return UserMapper.toUserDto(userRepository.update(existingUser));
+        if (userDto.getEmail() != null) {
+            existingUser.setEmail(userDto.getEmail());
+        }
+
+        try {
+            User updatedUser = userRepository.saveAndFlush(existingUser);
+            return UserMapper.toUserDto(updatedUser);
+        } catch (DataIntegrityViolationException e) {
+            throw new ConflictException("Пользователь с таким email уже существует");
+        }
+
     }
 
     @Override
     public void deleteUser(Long id) {
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(
+                        "Пользователь не найден с id: " + id));
+
+        userRepository.delete(user);
     }
 }
