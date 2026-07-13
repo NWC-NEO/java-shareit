@@ -83,7 +83,7 @@ public class ItemServiceImpl implements ItemService {
         User user = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь не найден"));
         Item item = itemRepository.findById(itemId).orElseThrow(() -> new NotFoundException("Предмет не найден"));
 
-        if (!bookingRepository.existsByBooker_IdAndItem_IdAndEndBeforeAndStatus(userId, itemId, LocalDateTime.now(), Status.APPROVED)) {
+        if (!bookingRepository.isCommentAllowed(userId, itemId, Status.APPROVED, LocalDateTime.now())) {
             throw new ValidationException("Пользователь не арендовал этот предмет или аренда еще не завершена");
         }
         Comment comment = new Comment();

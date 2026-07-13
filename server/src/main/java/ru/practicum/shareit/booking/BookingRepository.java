@@ -1,6 +1,8 @@
 package ru.practicum.shareit.booking;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,5 +33,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     Booking findFirstByItem_IdAndStartAfterAndStatusOrderByStartAsc(Long itemId, LocalDateTime start, Status status);
 
-    boolean existsByBooker_IdAndItem_IdAndEndBeforeAndStatus(Long bookerId, Long itemId, LocalDateTime end, Status status);
+    @Query("SELECT COUNT(b) > 0 FROM Booking b " +
+            "WHERE b.booker.id = :userId " +
+            "AND b.item.id = :itemId " +
+            "AND b.status = :status " +
+            "AND b.end < :now")
+    boolean isCommentAllowed(@Param("userId") Long userId,
+                             @Param("itemId") Long itemId,
+                             @Param("status") Status status,
+                             @Param("now") LocalDateTime now);
 }
+
