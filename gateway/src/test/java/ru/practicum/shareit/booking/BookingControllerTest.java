@@ -2,9 +2,11 @@ package ru.practicum.shareit.booking;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
@@ -13,72 +15,89 @@ import ru.practicum.shareit.booking.dto.BookingInputDto;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = BookingController.class)
+@WebMvcTest(BookingController.class)
 class BookingControllerTest {
 
     @Autowired
-    private ObjectMapper mapper;
+    private MockMvc mockMvc;
+
     @Autowired
-    private MockMvc mvc;
+    private ObjectMapper objectMapper;
+
     @MockBean
     private BookingClient bookingClient;
 
     @Test
-    void createBooking() throws Exception {
-        BookingInputDto dto = new BookingInputDto();
-        dto.setItemId(1L);
-        dto.setStart(LocalDateTime.now().plusDays(1));
-        dto.setEnd(LocalDateTime.now().plusDays(2));
+    void create_whenValid_returnsOk() throws Exception {
+        BookingInputDto bookingInputDto = new BookingInputDto();
+        bookingInputDto.setItemId(1L);
+        bookingInputDto.setStart(LocalDateTime.now().plusDays(1));
+        bookingInputDto.setEnd(LocalDateTime.now().plusDays(2));
 
-        when(bookingClient.create(anyLong(), any())).thenReturn(ResponseEntity.ok().build());
+        Mockito.when(bookingClient.create(anyLong(), any(BookingInputDto.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
 
-        mvc.perform(post("/bookings")
+        mockMvc.perform(post("/bookings")
                         .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(dto))
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookingInputDto)))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void approveBooking() throws Exception {
-        when(bookingClient.approve(anyLong(), anyLong(), anyBoolean())).thenReturn(ResponseEntity.ok().build());
+    void create_whenInvalid_returnsBadRequest() throws Exception {
+        BookingInputDto bookingInputDto = new BookingInputDto();
 
-        mvc.perform(patch("/bookings/1")
+        mockMvc.perform(post("/bookings")
+                        .header("X-Sharer-User-Id", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookingInputDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void approve_returnsOk() throws Exception {
+        Mockito.when(bookingClient.approve(anyLong(), anyLong(), anyBoolean()))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+
+        mockMvc.perform(patch("/bookings/1")
                         .header("X-Sharer-User-Id", 1L)
                         .param("approved", "true"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void getUserBookings() throws Exception {
-        when(bookingClient.getUserBookings(anyLong(), anyString())).thenReturn(ResponseEntity.ok().build());
+    void getById_returnsOk() throws Exception {
+        Mockito.when(bookingClient.getById(anyLong(), anyLong()))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
 
-        mvc.perform(get("/bookings")
-                        .header("X-Sharer-User-Id", 1L)
-                        .param("state", "ALL"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void getById() throws Exception {
-        when(bookingClient.getById(anyLong(), anyLong())).thenReturn(ResponseEntity.ok().build());
-
-        mvc.perform(get("/bookings/1")
+        mockMvc.perform(get("/bookings/1")
                         .header("X-Sharer-User-Id", 1L))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void getOwnerBookings() throws Exception {
-        when(bookingClient.getOwnerBookings(anyLong(), anyString())).thenReturn(ResponseEntity.ok().build());
+    void getUserBookings_returnsOk() throws Exception {
+        Mockito.when(bookingClient.getUserBookings(anyLong(), anyString()))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
 
-        mvc.perform(get("/bookings/owner")
+        mockMvc.perform(get("/bookings")
                         .header("X-Sharer-User-Id", 1L)
                         .param("state", "ALL"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getOwnerBookings_returnsOk() throws Exception {
+        Mockito.when(bookingClient.getOwnerBookings(anyLong(), anyString()))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+
+        mockMvc.perform(get("/bookings/owner")
+                        .header("X-Sharer-User-Id", 1L)
+                        .param("state", "FUTURE"))
                 .andExpect(status().isOk());
     }
 }
